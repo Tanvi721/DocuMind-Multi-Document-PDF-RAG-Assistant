@@ -1,6 +1,7 @@
 
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Tuple
 
@@ -13,6 +14,11 @@ from langchain_core.documents import Document
 APP_DIR = Path(__file__).resolve().parent.parent
 VECTORSTORE_DIRNAME = "vectorstore_v2"
 COLLECTION = "multi_pdf_collection"
+
+
+@lru_cache(maxsize=1)
+def _get_embeddings(model_name: str) -> HuggingFaceEmbeddings:
+    return HuggingFaceEmbeddings(model_name=model_name)
 
 
 class MultiDocumentRAG:
@@ -29,8 +35,8 @@ class MultiDocumentRAG:
 
         self.data_dir = Path(os.getenv("RAG_DATA_DIR", str(APP_DIR)))
         self.persist_dir = str(self.data_dir / VECTORSTORE_DIRNAME)
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=os.getenv(
+        self.embeddings = _get_embeddings(
+            os.getenv(
                 "EMBEDDING_MODEL",
                 "sentence-transformers/all-MiniLM-L6-v2"
             )

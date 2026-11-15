@@ -50,7 +50,11 @@ with st.sidebar:
                 st.session_state.doc_count = len(saved)
                 st.session_state.chunk_count = count
                 st.session_state.chat_history = []
-                st.success(f"Indexed {len(saved)} PDF(s) into {count} searchable chunks.")
+                filenames = ", ".join(Path(path).name for path in saved)
+                st.success(
+                    f"Indexed {len(saved)} PDF(s) into {count} searchable chunks: "
+                    f"{filenames}"
+                )
             except Exception as exc:
                 logging.exception("Could not process uploaded PDFs")
                 st.error(f"Could not process the PDFs: {exc}")
