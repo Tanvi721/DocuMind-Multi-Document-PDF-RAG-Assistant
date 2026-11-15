@@ -2,7 +2,9 @@
 
 DocuMind is a Streamlit app for asking questions across multiple PDF reports. It extracts page text, indexes overlapping text chunks, retrieves relevant passages, and uses a language model to answer with source citations.
 
-## Screenshots
+**Live demo: https://documind-rag-comj.onrender.com**
+
+## Project View
 
 ### Upload and ask across reports
 
