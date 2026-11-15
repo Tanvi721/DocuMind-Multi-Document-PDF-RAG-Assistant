@@ -14,3 +14,5 @@ services:
         value: gemini-3.8-flash
       - key: EMBEDDING_MODEL
         value: sentence-transformers/all-MiniLM-L6-v2
+      - key: GEMINI_API_KEY
+        sync: false
