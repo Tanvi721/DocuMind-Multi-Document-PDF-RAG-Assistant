@@ -12,7 +12,9 @@ services:
         value: gemini
       - key: GEMINI_MODEL
         value: gemini-3.8-flash
+      - key: EMBEDDING_PROVIDER
+        value: gemini
       - key: EMBEDDING_MODEL
-        value: sentence-transformers/all-MiniLM-L6-v2
+        value: gemini-embedding-001
       - key: GEMINI_API_KEY
         sync: false

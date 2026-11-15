@@ -13,7 +13,7 @@ load_dotenv()
 APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("RAG_DATA_DIR", str(APP_DIR)))
 UPLOAD_DIR = DATA_DIR / "data" / "uploads"
-VECTOR_DIR = DATA_DIR / "vectorstore_v2"
+VECTOR_DIR = DATA_DIR / "vectorstore_v3"
 DEMO_DIR = APP_DIR / "data" / "sample_pdfs"
 
 st.set_page_config(page_title="DocuMind | Multi-PDF RAG", page_icon="📚", layout="wide")

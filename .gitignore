@@ -4,5 +4,6 @@ venv/
 .venv/
 vectorstore/
 vectorstore_v2/
+vectorstore_v3/
 data/uploads/
 .kaggle/

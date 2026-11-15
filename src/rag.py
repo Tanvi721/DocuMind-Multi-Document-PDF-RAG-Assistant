@@ -6,19 +6,78 @@ from pathlib import Path
 from typing import List, Tuple
 
 import fitz
+from google import genai
+from google.genai import types
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 
 APP_DIR = Path(__file__).resolve().parent.parent
-VECTORSTORE_DIRNAME = "vectorstore_v2"
+VECTORSTORE_DIRNAME = "vectorstore_v3"
 COLLECTION = "multi_pdf_collection"
 
 
 @lru_cache(maxsize=1)
-def _get_embeddings(model_name: str) -> HuggingFaceEmbeddings:
-    return HuggingFaceEmbeddings(model_name=model_name)
+def _get_embeddings(provider: str, model_name: str, api_key: str) -> Embeddings:
+    return APIEmbeddings(provider, model_name, api_key)
+
+
+class APIEmbeddings(Embeddings):
+    def __init__(self, provider: str, model_name: str, api_key: str):
+        self.provider = provider
+        self.model_name = model_name
+        if provider == "gemini":
+            self.client = genai.Client(api_key=api_key)
+        else:
+            from openai import OpenAI
+
+            self.client = OpenAI(api_key=api_key)
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        vectors = []
+        for start in range(0, len(texts), 100):
+            batch = texts[start:start + 100]
+            if self.provider == "gemini":
+                response = self.client.models.embed_content(
+                    model=self.model_name,
+                    contents=batch,
+                    config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT")
+                )
+                embeddings = response.embeddings
+                if embeddings is None or len(embeddings) != len(batch):
+                    raise RuntimeError("Gemini returned an incomplete document embedding batch.")
+                vectors.extend([embedding.values for embedding in embeddings])
+            else:
+                response = self.client.embeddings.create(
+                    model=self.model_name,
+                    input=batch
+                )
+                if len(response.data) != len(batch):
+                    raise RuntimeError("OpenAI returned an incomplete document embedding batch.")
+                vectors.extend(
+                    [item.embedding for item in sorted(response.data, key=lambda item: item.index)]
+                )
+        return vectors
+
+    def embed_query(self, text: str) -> List[float]:
+        if self.provider == "gemini":
+            response = self.client.models.embed_content(
+                model=self.model_name,
+                contents=text,
+                config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY")
+            )
+            if not response.embeddings or response.embeddings[0].values is None:
+                raise RuntimeError("Gemini returned no query embedding.")
+            return response.embeddings[0].values
+
+        response = self.client.embeddings.create(
+            model=self.model_name,
+            input=text
+        )
+        if not response.data:
+            raise RuntimeError("OpenAI returned no query embedding.")
+        return response.data[0].embedding
 
 
 class MultiDocumentRAG:
@@ -35,11 +94,27 @@ class MultiDocumentRAG:
 
         self.data_dir = Path(os.getenv("RAG_DATA_DIR", str(APP_DIR)))
         self.persist_dir = str(self.data_dir / VECTORSTORE_DIRNAME)
+        embedding_provider = os.getenv("EMBEDDING_PROVIDER", "gemini").lower()
+        if embedding_provider not in {"gemini", "openai"}:
+            raise ValueError("EMBEDDING_PROVIDER must be either 'gemini' or 'openai'.")
+
+        embedding_key_name = (
+            "GEMINI_API_KEY" if embedding_provider == "gemini" else "OPENAI_API_KEY"
+        )
+        embedding_api_key = os.getenv(embedding_key_name)
+        if not embedding_api_key:
+            raise ValueError(f"Set {embedding_key_name} for document embeddings.")
+
+        default_embedding_model = (
+            "gemini-embedding-001"
+            if embedding_provider == "gemini"
+            else "text-embedding-3-small"
+        )
+        embedding_model = os.getenv("EMBEDDING_MODEL", default_embedding_model)
         self.embeddings = _get_embeddings(
-            os.getenv(
-                "EMBEDDING_MODEL",
-                "sentence-transformers/all-MiniLM-L6-v2"
-            )
+            embedding_provider,
+            embedding_model,
+            embedding_api_key
         )
 
         self.vectorstore = None
