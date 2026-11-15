@@ -1,0 +1,8 @@
+__pycache__/
+.env
+venv/
+.venv/
+vectorstore/
+vectorstore_v2/
+data/uploads/
+.kaggle/
