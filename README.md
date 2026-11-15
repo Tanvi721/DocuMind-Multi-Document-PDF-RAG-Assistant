@@ -103,14 +103,14 @@ Do not commit `.env`, API keys, or Kaggle credentials. The repository ignores `.
 
 ## Deploy on Render
 
-The repository includes a Render Blueprint in `render.yaml`.
+The repository includes a Render Blueprint in `render.yaml`, configured for Render's free web-service plan.
 
 1. Push the project to GitHub.
 2. In Render, create a new Blueprint and select the repository.
 3. Add `GEMINI_API_KEY` as a secret in the service environment, or configure `LLM_PROVIDER=openai` and add `OPENAI_API_KEY`.
 4. Deploy the service.
 
-The first build downloads Python dependencies and the embedding model. The app writes uploaded files and the vector index to its runtime filesystem. For persistent data on Render, attach a persistent disk, mount it, and set `RAG_DATA_DIR` to the mount path. Without persistent storage, local uploads and the index may be lost when the service restarts or redeploys.
+The free service may spin down after inactivity and has limited resources. The first build downloads Python dependencies and the embedding model; loading the local Sentence Transformers model to process PDFs may exceed the free service's available memory. Uploaded PDFs and the Chroma index are stored on an ephemeral filesystem and may be lost when the service restarts or redeploys. Persistent disks require a paid plan.
 
 ## Project layout
 
